@@ -244,6 +244,20 @@ void PositionalDeleteFileReader::updateDeleteBitmap(
     deletePositionsOffset_++;
   }
 
+  LOG(INFO) << "baseReadOffset = " << baseReadOffset
+            << "\nsplitOffset_ = " << splitOffset_
+            << "\ndeletePositionsOffset_ = " << deletePositionsOffset_
+            << "\ndeletePositionsVector::size = "
+            << deletePositionsVector->size()
+            << "\ndeletePositions[deletePositionsVector->size() - 1] = "
+            << deletePositions[deletePositionsVector->size() - 1]
+            << "\ndeletePositions[deletePositionsOffset_] = "
+            << deletePositions[deletePositionsOffset_]
+            << "\ndeletePositions[deletePositionsOffset_ - 1] = "
+            << deletePositions[deletePositionsOffset_ - 1]
+            << "\nrowNumberLowerBound = " << rowNumberLowerBound
+            << "\nrowNumberUpperBound = " << rowNumberUpperBound;
+
   // There might be multiple delete files for a single base file. The size of
   // the deleteBitmapBuffer should be the largest position among all delte files
   deleteBitmapBuffer->setSize(std::max(

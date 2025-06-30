@@ -106,6 +106,10 @@ class ColumnHandle : public ISerializable {
     return name();
   }
 
+  virtual std::string toString() const {
+    VELOX_NYI();
+  }
+
   folly::dynamic serialize() const override;
 
  protected:
@@ -196,7 +200,7 @@ class DataSink {
     uint64_t recodeTimeNs{0};
     uint64_t compressionTimeNs{0};
 
-    common::SpillStats spillStats;
+    velox::common::SpillStats spillStats;
 
     bool empty() const;
 

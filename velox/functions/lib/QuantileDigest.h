@@ -23,6 +23,7 @@
 #include "velox/common/base/Exceptions.h"
 #include "velox/common/base/Portability.h"
 #include "velox/common/memory/HashStringAllocator.h"
+#include "velox/functions/lib/FunctionUtil.h"
 
 namespace facebook::velox::functions {
 
@@ -238,27 +239,6 @@ class QuantileDigest {
   std::vector<int32_t, RebindAlloc<int32_t>> lefts_;
   std::vector<int32_t, RebindAlloc<int32_t>> rights_;
 };
-
-namespace detail {
-template <typename T>
-void read(const char*& input, T& value) {
-  value = folly::loadUnaligned<T>(input);
-  input += sizeof(T);
-}
-
-template <typename T>
-T read(const char*& input) {
-  T value = folly::loadUnaligned<T>(input);
-  input += sizeof(T);
-  return value;
-}
-
-template <typename T>
-void write(T value, char*& out) {
-  folly::storeUnaligned(out, value);
-  out += sizeof(T);
-}
-} // namespace detail
 
 // static
 template <typename T, typename Allocator>

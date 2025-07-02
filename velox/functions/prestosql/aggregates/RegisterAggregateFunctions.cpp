@@ -48,6 +48,7 @@
 #include "velox/functions/prestosql/aggregates/SetAggregates.h"
 #include "velox/functions/prestosql/aggregates/SumAggregate.h"
 #include "velox/functions/prestosql/aggregates/SumDataSizeForStatsAggregate.h"
+#include "velox/functions/prestosql/aggregates/ThetaSketchAggregate.h"
 #include "velox/functions/prestosql/aggregates/VarianceAggregates.h"
 #include "velox/functions/prestosql/types/JsonRegistration.h"
 
@@ -101,6 +102,7 @@ void registerAllAggregateFunctions(
   registerSetAggAggregate(prefix, withCompanionFunctions, overwrite);
   registerSetUnionAggregate(prefix, withCompanionFunctions, overwrite);
   registerSumAggregate(prefix, withCompanionFunctions, overwrite);
+  registerThetaSketchAggregate(prefix, withCompanionFunctions, overwrite);
   registerVarianceAggregates(prefix, withCompanionFunctions, overwrite);
 }
 

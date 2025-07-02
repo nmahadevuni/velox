@@ -28,7 +28,9 @@
 #include "CountZeros.h"
 #include "MemoryOperations.h"
 #include "ThetaSketch.h"
-#include "velox/common/base/Exceptions.h"
+#include "velox/functions/lib/FunctionUtil.h"
+
+using namespace facebook::velox::functions;
 
 namespace facebook::velox::common::theta {
 
@@ -439,6 +441,33 @@ void CompactThetaSketchAlloc<A>::serialize(std::ostream& os) const {
     write(os, this->theta_);
   if (entries_.size() > 0)
     write(os, entries_.data(), entries_.size() * sizeof(uint64_t));
+}
+
+template <typename A>
+void CompactThetaSketchAlloc<A>::serialize(char* s) const {
+  const uint8_t preamble_longs = this->isEstimationMode() ? 3
+      : this->isEmpty() || entries_.size() == 1           ? 1
+                                                          : 2;
+  ::detail::write<uint8_t>(preamble_longs, s);
+  ::detail::write<uint8_t>(UNCOMPRESSED_SERIAL_VERSION, s);
+  ::detail::write<uint8_t>(SKETCH_TYPE, s);
+  ::detail::write<uint16_t>(0, s);
+  const uint8_t flags_byte(
+      (1 << flags::IS_COMPACT) | (1 << flags::IS_READ_ONLY) |
+      (this->isEmpty() ? 1 << flags::IS_EMPTY : 0) |
+      (this->isOrdered() ? 1 << flags::IS_ORDERED : 0));
+  ::detail::write<uint8_t>(flags_byte, s);
+  ::detail::write<uint16_t>(getSeedHash(), s);
+  if (preamble_longs > 1) {
+    ::detail::write<uint32_t>(static_cast<uint32_t>(entries_.size()), s);
+    ::detail::write<uint32_t>(0, s);
+  }
+  if (this->isEstimationMode()) {
+    ::detail::write<uint64_t>(this->theta_, s);
+  }
+  if (entries_.size() > 0) {
+    std::memcpy(s, entries_.data(), entries_.size() * sizeof(uint64_t));
+  }
 }
 
 template <typename A>

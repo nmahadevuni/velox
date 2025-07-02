@@ -467,6 +467,13 @@ class CompactThetaSketchAlloc : public ThetaSketchAlloc<Allocator> {
   vector_bytes serialize(unsigned header_size_bytes = 0) const;
 
   /**
+   * This method serializes the sketch into a given string buffer in a binary
+   * form
+   * @param s string buffer
+   */
+  void serialize(char* s) const;
+
+  /**
    * This method serializes the sketch into a given stream in a compressed
    * binary form. Compression is applied to ordered sketches except empty and
    * single item. For unordered, empty and single item sketches this method is

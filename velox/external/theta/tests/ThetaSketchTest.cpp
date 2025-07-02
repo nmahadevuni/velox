@@ -144,7 +144,6 @@ TEST(ThetaSketch, estimation) {
   const int n = 8000;
   for (int i = 0; i < n; i++)
     update_sketch.update(i);
-  // std::cerr << update_sketch.to_string();
   EXPECT_FALSE(update_sketch.isEmpty());
   EXPECT_TRUE(update_sketch.isEstimationMode());
   EXPECT_TRUE(update_sketch.getTheta() < 1.0);
@@ -309,7 +308,7 @@ TEST(ThetaSketch, DeserializeCompactV2EstimationFromJava) {
   }
 }
 
-TEST(ThetaSketch, DerializeDeserializeStreamAndBytesEquivalence) {
+TEST(ThetaSketch, DeserializeStreamAndBytesEquivalence) {
   updateThetaSketch update_sketch = updateThetaSketch::builder().build();
   const int n = 8192;
   for (int i = 0; i < n; i++)
@@ -330,6 +329,51 @@ TEST(ThetaSketch, DerializeDeserializeStreamAndBytesEquivalence) {
   compactThetaSketch deserialized_sketch2 =
       compactThetaSketch::deserialize(bytes.data(), bytes.size());
   EXPECT_TRUE(bytes.size() == static_cast<size_t>(s.tellg()));
+  EXPECT_TRUE(deserialized_sketch2.isEmpty() == deserialized_sketch1.isEmpty());
+  EXPECT_TRUE(
+      deserialized_sketch2.isOrdered() == deserialized_sketch1.isOrdered());
+  EXPECT_TRUE(
+      deserialized_sketch2.getNumRetained() ==
+      deserialized_sketch1.getNumRetained());
+  EXPECT_TRUE(
+      deserialized_sketch2.getTheta() == deserialized_sketch1.getTheta());
+  EXPECT_TRUE(
+      deserialized_sketch2.getEstimate() == deserialized_sketch1.getEstimate());
+  EXPECT_TRUE(
+      deserialized_sketch2.getLowerBound(1) ==
+      deserialized_sketch1.getLowerBound(1));
+  EXPECT_TRUE(
+      deserialized_sketch2.getUpperBound(1) ==
+      deserialized_sketch1.getUpperBound(1));
+  // the sketches are ordered, so the iteration sequence must match exactly
+  auto iter = deserialized_sketch1.begin();
+  for (auto key : deserialized_sketch2) {
+    EXPECT_TRUE(*iter == key);
+    ++iter;
+  }
+}
+
+TEST(ThetaSketch, DeserializeStringAndBytesEquivalence) {
+  updateThetaSketch update_sketch = updateThetaSketch::builder().build();
+  const int n = 5;
+  for (int i = 1; i < 5; i++)
+    update_sketch.update(i);
+
+  char* s;
+  auto compact_sketch = update_sketch.compact();
+  auto serializedSize = compact_sketch.getSerializedSizeBytes();
+  s = new char[serializedSize];
+  compact_sketch.serialize(s);
+  auto bytes = compact_sketch.serialize();
+  EXPECT_TRUE(bytes.size() == compact_sketch.getSerializedSizeBytes());
+  for (size_t i = 0; i < bytes.size(); ++i) {
+    EXPECT_TRUE(((char*)bytes.data())[i] == s[i]);
+  }
+
+  compactThetaSketch deserialized_sketch1 = compactThetaSketch::deserialize((void*)s, serializedSize);
+  compactThetaSketch deserialized_sketch2 =
+      compactThetaSketch::deserialize(bytes.data(), bytes.size());
+  EXPECT_TRUE(bytes.size() == static_cast<size_t>(serializedSize));
   EXPECT_TRUE(deserialized_sketch2.isEmpty() == deserialized_sketch1.isEmpty());
   EXPECT_TRUE(
       deserialized_sketch2.isOrdered() == deserialized_sketch1.isOrdered());

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "FileProperties.h"
+#include "velox/connectors/lakehouse/iceberg/FileProperties.h"
 #include "velox/connectors/Connector.h"
 #include "velox/dwio/common/Options.h"
 

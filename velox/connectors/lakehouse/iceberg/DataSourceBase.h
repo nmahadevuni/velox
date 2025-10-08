@@ -27,17 +27,6 @@
 #include "velox/type/Type.h"
 
 namespace facebook::velox::connector::lakehouse::iceberg {
-namespace {
-
-bool isMember(
-    const std::vector<exec::FieldReference*>& fields,
-    const exec::FieldReference& field);
-
-bool shouldEagerlyMaterialize(
-    const exec::Expr& remainingFilter,
-    const exec::FieldReference& field);
-
-}
 
 class DataSourceBase : public DataSource {
  public:
@@ -78,7 +67,7 @@ class DataSourceBase : public DataSource {
 
  protected:
 //  virtual std::unique_ptr<SplitReaderBase> createSplitReader();
-  virtual std::shared_ptr<velox::common::ScanSpec> makeScanSpec() = 0;
+  //virtual std::shared_ptr<velox::common::ScanSpec> makeScanSpec() = 0;
 
   virtual bool isSpecialColumn(const std::string& name) const {
     VELOX_UNREACHABLE();

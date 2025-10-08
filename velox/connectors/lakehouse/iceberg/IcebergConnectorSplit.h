@@ -131,8 +131,8 @@ class IcebergConnectorSplitBuilder {
   }
 
 
-  std::shared_ptr<IcebergConnectorSplit> build() const {
-    return std::make_shared<IcebergConnectorSplit>(
+  std::unique_ptr<IcebergConnectorSplit> build() const {
+    return std::make_unique<IcebergConnectorSplit>(
         connectorId_,
         filePath_,
         fileFormat_, // dwio::common::FileFormat

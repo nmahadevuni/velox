@@ -20,7 +20,7 @@
 #include <string>
 #include <optional>
 
-namespace facebook::velox {
+namespace facebook::velox::connector::lakehouse::iceberg {
 
 struct FileProperties {
   std::optional<int64_t> fileSize;
@@ -31,4 +31,4 @@ struct FileProperties {
   std::shared_ptr<std::string> extraFileInfo{nullptr};
 };
 
-} // namespace facebook::velox
+} // namespace facebook::velox::connector::lakehouse::iceberg

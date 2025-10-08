@@ -292,7 +292,7 @@ class IcebergReadTest : public IcebergConnectorTestBase {
           .splitWeight(0)
           .cacheable(true)
           .deleteFiles(deleteFiles);
-      splits.emplace_back(icebergConnectorSplitBuilder.build());
+      splits.emplace_back(std::move(icebergConnectorSplitBuilder.build()));
     }
 
     return splits;

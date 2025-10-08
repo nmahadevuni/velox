@@ -29,6 +29,18 @@
 
 namespace facebook::velox::connector::lakehouse::iceberg {
 
+namespace {
+
+bool isMember(
+    const std::vector<exec::FieldReference*>& fields,
+    const exec::FieldReference& field);
+
+bool shouldEagerlyMaterialize(
+    const exec::Expr& remainingFilter,
+    const exec::FieldReference& field);
+
+}
+
 class IcebergDataSource : public DataSourceBase {
  public:
   IcebergDataSource(
@@ -50,7 +62,7 @@ class IcebergDataSource : public DataSourceBase {
   }
 
  private:
-  std::shared_ptr<velox::common::ScanSpec> makeScanSpec() override;
+  std::shared_ptr<velox::common::ScanSpec> makeScanSpec();
 
   bool isSpecialColumn(const std::string& name) const override;
   void setupRowIdColumn();

@@ -26,7 +26,7 @@
 
 #include <string>
 
-namespace facebook::velox::connector::lakehouse::common {
+namespace facebook::velox::connector::lakehouse::iceberg {
 
 struct SubfieldSpec {
   const velox::common::Subfield* subfield;
@@ -35,7 +35,7 @@ struct SubfieldSpec {
 
 bool isSynthesizedColumn(
     const std::string& name,
-    const std::unordered_map<std::string, std::shared_ptr<ColumnHandleBase>>&
+    const std::unordered_map<std::string, std::shared_ptr<const ColumnHandleBase>>&
         infoColumns);
 
 bool isSpecialColumn(
@@ -57,7 +57,7 @@ void checkColumnNameLowerCase(
     const velox::common::SubfieldFilters& filters,
     const std::unordered_map<
         std::string,
-        std::shared_ptr<ColumnHandleBase>>&
+        std::shared_ptr<const ColumnHandleBase>>&
         infoColumns);
 
 void checkColumnNameLowerCase(
@@ -92,9 +92,9 @@ void configureRowReaderOptions(
     const RowTypePtr& rowType,
     const std::shared_ptr<
         const ConnectorSplitBase>&
-        hiveSplit,
+        icebergSplit,
     const std::shared_ptr<
-        const ConnectorConfigBase>& hiveConfig,
+        const ConnectorConfigBase>& icebergConfig,
     const config::ConfigBase* sessionProperties,
     dwio::common::RowReaderOptions& rowReaderOptions);
 
@@ -105,9 +105,9 @@ void configureRowReaderOptions(
     const RowTypePtr& rowType,
     const std::shared_ptr<
         const ConnectorSplitBase>&
-        hiveSplit,
+        icebergSplit,
     const std::shared_ptr<
-        const ConnectorConfigBase>& hiveConfig,
+        const ConnectorConfigBase>& icebergConfig,
     const config::ConfigBase* sessionProperties,
     dwio::common::RowReaderOptions& rowReaderOptions);
 
@@ -179,4 +179,4 @@ core::TypedExprPtr extractFiltersFromRemainingFilter(
     velox::common::SubfieldFilters& filters,
     double& sampleRate);
 
-} // namespace connector::common
+} // namespace facebook::velox::connector::lakehouse::iceberg

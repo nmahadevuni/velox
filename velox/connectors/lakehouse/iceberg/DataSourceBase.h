@@ -23,22 +23,36 @@
 #include "velox/connectors/Connector.h"
 #include "velox/dwio/common/ScanSpec.h"
 #include "velox/exec/OperatorUtils.h"
+#include "velox/expression/FieldReference.h"
 #include "velox/type/Type.h"
 
-namespace facebook::velox::connector::lakehouse::common {
+namespace facebook::velox::connector::lakehouse::iceberg {
+namespace {
+
+bool isMember(
+    const std::vector<exec::FieldReference*>& fields,
+    const exec::FieldReference& field);
+
+bool shouldEagerlyMaterialize(
+    const exec::Expr& remainingFilter,
+    const exec::FieldReference& field);
+
+}
 
 class DataSourceBase : public DataSource {
  public:
-//  DataSourceBase(
-//      const RowTypePtr& outputType,
-//      const std::shared_ptr<connector::ConnectorTableHandle>& tableHandle,
-//      const std::unordered_map<
-//          std::string,
-//          std::shared_ptr<connector::ColumnHandle>>& columnHandles,
-//      FileHandleFactory* fileHandleFactory,
-//      folly::Executor* executor,
-//      const ConnectorQueryCtx* connectorQueryCtx,
-//      const std::shared_ptr<ConnectorConfigBase>& connectorConfig);
+  DataSourceBase(
+      const RowTypePtr& outputType,
+      const ConnectorTableHandlePtr& tableHandle,
+      const connector::ColumnHandleMap& columnHandles,
+      FileHandleFactory* fileHandleFactory,
+      folly::Executor* executor,
+      const ConnectorQueryCtx* connectorQueryCtx,
+      const std::shared_ptr<ConnectorConfigBase>& connectorConfig);
+
+  const velox::common::SubfieldFilters* getFilters() const override {
+    return &filters_;
+  }
 
   void addDynamicFilter(
       column_index_t outputChannel,
@@ -52,7 +66,7 @@ class DataSourceBase : public DataSource {
     return completedRows_;
   }
 
-  std::unordered_map<std::string, RuntimeCounter> runtimeStats() override;
+  std::unordered_map<std::string, RuntimeMetric> runtimeStats();
 
   bool allPrefetchIssued() const override {
     return splitReader_ && splitReader_->allPrefetchIssued();
@@ -63,15 +77,16 @@ class DataSourceBase : public DataSource {
   int64_t estimatedRowSize() override;
 
  protected:
-  virtual std::shared_ptr<velox::common::ScanSpec> makeScanSpec();
+//  virtual std::unique_ptr<SplitReaderBase> createSplitReader();
+  virtual std::shared_ptr<velox::common::ScanSpec> makeScanSpec() = 0;
 
   virtual bool isSpecialColumn(const std::string& name) const {
     VELOX_UNREACHABLE();
   }
 
-//  virtual bool hasRemainingPartitionFilter() {
-//    return false;
-//  }
+  virtual bool hasRemainingPartitionFilter() {
+    return false;
+  }
 
   virtual vector_size_t evaluateRemainingPartitionFilter(
       RowVectorPtr& rowVector,
@@ -110,13 +125,13 @@ class DataSourceBase : public DataSource {
   folly::F14FastMap<std::string, std::vector<const velox::common::Subfield*>>
       subfields_;
 
-  std::shared_ptr<TableHandleBase> tableHandle_;
+  std::shared_ptr<const TableHandleBase> tableHandle_;
   // Column handles for the partition key columns keyed on partition key column
   // name. It comes from the TableScanNode's assignments.
-  std::unordered_map<std::string, std::shared_ptr<ColumnHandleBase>>
+  std::unordered_map<std::string, std::shared_ptr<const ColumnHandleBase>>
       partitionColumnHandles_;
   // Column handles for the Split info columns keyed on their column names.
-  std::unordered_map<std::string, std::shared_ptr<ColumnHandleBase>>
+  std::unordered_map<std::string, std::shared_ptr<const ColumnHandleBase>>
       infoColumns_;
   //  std::unordered_map<std::string, std::shared_ptr<ColumnHandleBase>>
   //      specialColumns_;
@@ -143,9 +158,6 @@ class DataSourceBase : public DataSource {
   std::vector<column_index_t> multiReferencedFields_;
 
   std::shared_ptr<random::RandomSkipTracker> randomSkip_;
-
-  //  int64_t numBucketConversion_ = 0;
-  //  std::unique_ptr<HivePartitionFunction> partitionFunction_;
   std::vector<uint32_t> partitions_;
 
   // Reusable memory for remaining filter evaluation.
@@ -156,4 +168,4 @@ class DataSourceBase : public DataSource {
   exec::FilterEvalCtx filterEvalCtx_;
 };
 
-} // namespace facebook::velox::connector::lakehouse::common
+} // namespace facebook::velox::connector::lakehouse::iceberg

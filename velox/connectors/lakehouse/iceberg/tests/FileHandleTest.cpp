@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-#include "velox/connectors/lakehouse/common/FileHandle.h"
+#include "velox/connectors/lakehouse/iceberg/FileHandle.h"
 #include "ConnectorTestBase.h"
-#include "velox/common/caching/SimpleLRUCache.h"
-#include "velox/common/file/File.h"
-#include "velox/common/file/FileSystems.h"
-#include "velox/exec/tests/utils/TempFilePath.h"
 
 #include <gtest/gtest.h>
 
-namespace facebook::velox::connector::lakehouse::common::test {
+namespace facebook::velox::connector::lakehouse::iceberg::test {
 
 using namespace facebook::velox;
-// using namespace facebook::velox::connector::lakehouse::common;
 
 TEST(FileHandleTest, localFile) {
   filesystems::registerLocalFileSystem();
@@ -41,9 +36,11 @@ TEST(FileHandleTest, localFile) {
   }
 
   FileHandleFactory factory(
-      std::make_unique<SimpleLRUCache<std::string, FileHandle>>(1000),
+      std::make_unique<SimpleLRUCache<FileHandleKey, FileHandle>>(1000),
       std::make_unique<FileHandleGenerator>());
-  auto fileHandle = factory.generate(filename);
+  FileHandleKey fileHandleKey{
+      .filename = filename};
+  auto fileHandle = factory.generate(fileHandleKey);
   ASSERT_EQ(fileHandle->file->size(), 3);
   char buffer[3];
   ASSERT_EQ(fileHandle->file->pread(0, 3, &buffer), "foo");
@@ -65,12 +62,14 @@ TEST(FileHandleTest, localFileWithProperties) {
   }
 
   FileHandleFactory factory(
-      std::make_unique<SimpleLRUCache<std::string, FileHandle>>(1000),
+      std::make_unique<SimpleLRUCache<FileHandleKey, FileHandle>>(1000),
       std::make_unique<FileHandleGenerator>());
   FileProperties properties = {
       .fileSize = tempFile->fileSize(),
       .modificationTime = tempFile->fileModifiedTime()};
-  auto fileHandle = factory.generate(filename, &properties);
+  FileHandleKey fileHandleKey{
+      .filename = filename};
+  auto fileHandle = factory.generate(fileHandleKey, &properties);
   ASSERT_EQ(fileHandle->file->size(), 3);
   char buffer[3];
   ASSERT_EQ(fileHandle->file->pread(0, 3, &buffer), "foo");
@@ -79,4 +78,4 @@ TEST(FileHandleTest, localFileWithProperties) {
   remove(filename.c_str());
 }
 
-} // namespace facebook::velox::connector::lakehouse::common::test
+} // namespace facebook::velox::connector::lakehouse::iceberg::test

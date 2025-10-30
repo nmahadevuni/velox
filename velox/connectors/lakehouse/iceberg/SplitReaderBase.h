@@ -16,13 +16,13 @@
 
 #pragma once
 
+#include "ConnectorConfigBase.h"
+#include "ConnectorSplitBase.h"
+#include "FileHandle.h"
+#include "TableHandleBase.h"
 #include "velox/common/base/RandomUtil.h"
 #include "velox/common/file/FileSystems.h"
 #include "velox/connectors/Connector.h"
-#include "velox/connectors/lakehouse/common/ConnectorConfigBase.h"
-#include "velox/connectors/lakehouse/common/ConnectorSplitBase.h"
-#include "velox/connectors/lakehouse/common/FileHandle.h"
-#include "velox/connectors/lakehouse/common/TableHandleBase.h"
 #include "velox/dwio/common/Options.h"
 #include "velox/dwio/common/Reader.h"
 #include "velox/type/Type.h"
@@ -31,14 +31,14 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-namespace facebook::velox::connector::lakehouse::common {
+namespace facebook::velox::connector::lakehouse::iceberg {
 
 class SplitReaderBase {
  public:
   SplitReaderBase(
       const std::shared_ptr<const ConnectorSplitBase>& split,
       const std::shared_ptr<const TableHandleBase>& tableHandle,
-      const std::unordered_map<std::string, std::shared_ptr<ColumnHandleBase>>*
+      const std::unordered_map<std::string, std::shared_ptr<const ColumnHandleBase>>*
           partitionColumnHandles,
       const ConnectorQueryCtx* connectorQueryCtx,
       const std::shared_ptr<const ConnectorConfigBase>& ConnectorConfigBase,
@@ -125,7 +125,7 @@ class SplitReaderBase {
 
   std::shared_ptr<const ConnectorSplitBase> split_;
   const std::shared_ptr<const TableHandleBase> tableHandle_;
-  const std::unordered_map<std::string, std::shared_ptr<ColumnHandleBase>>*
+  const std::unordered_map<std::string, std::shared_ptr<const ColumnHandleBase>>*
       partitionColumnHandles_;
   const ConnectorQueryCtx* connectorQueryCtx_;
   const std::shared_ptr<const ConnectorConfigBase> connectorConfig_;
@@ -145,4 +145,4 @@ class SplitReaderBase {
   bool emptySplit_;
 };
 
-} // namespace facebook::velox::connector::lakehouse::common
+} // namespace facebook::velox::connector::lakehouse::iceberg

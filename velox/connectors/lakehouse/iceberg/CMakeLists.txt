@@ -14,21 +14,45 @@
 
 velox_add_library(
   velox_lakehouse_iceberg_connector
-        EqualityDeleteFileReader.cpp
-        FilterUtil.cpp
+        ConnectorConfigBase.cpp
+        DataSourceBase.cpp
+        ConnectorSplitBase.cpp
+        ConnectorUtil.cpp
+        FileHandle.cpp
+        SplitReaderBase.cpp
+        TableHandleBase.cpp
+        IcebergConfig.cpp
         IcebergConnector.cpp
         IcebergConnectorSplit.cpp
         IcebergConnectorUtil.cpp
-#  IcebergDataSink.cpp
-        IcebergDeleteFile.cpp
+        IcebergPartitionUtil.cpp
+        PartitionIdGenerator.cpp
+        IcebergDataSource.cpp
+        IcebergPartitionFunction.cpp
         IcebergSplitReader.cpp
         IcebergTableHandle.cpp
         PositionalDeleteFileReader.cpp
   )
 
 velox_link_libraries(
-        velox_lakehouse_iceberg_connector PRIVATE  velox_connector
-         velox_lakehouse_common velox_common_io velox_dwio_catalog_fbhive )
+        velox_lakehouse_iceberg_connector
+        PRIVATE velox_connector
+        velox_common_io
+        velox_dwio_catalog_fbhive
+        velox_buffer
+        velox_caching
+        velox_common_compression
+        velox_common_config
+        velox_dwio_common_encryption
+        velox_dwio_common_exception
+        velox_exception
+        velox_expression
+        velox_memory
+        velox_type_tz
+        Boost::regex
+        Folly::folly
+        glog::glog
+        protobuf::libprotobuf)
 
 if(${VELOX_BUILD_TESTING})
   add_subdirectory(tests)

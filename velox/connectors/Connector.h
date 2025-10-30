@@ -106,10 +106,6 @@ class ColumnHandle : public ISerializable {
     return name();
   }
 
-  virtual std::string toString() const {
-    VELOX_NYI();
-  }
-
   folly::dynamic serialize() const override;
 
  protected:

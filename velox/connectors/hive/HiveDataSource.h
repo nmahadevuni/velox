@@ -65,7 +65,7 @@ class HiveDataSource : public FileDataSource {
 
   /// Pre-creation setup: stats tracking, bucket conversion, rowId.
   /// Returns bucket channels (empty if none).
-  std::vector<column_index_t> prepareSplit();
+  virtual std::vector<column_index_t> prepareSplit();
 
  private:
   std::vector<column_index_t> setupBucketConversion();

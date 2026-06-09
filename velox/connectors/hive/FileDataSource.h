@@ -117,6 +117,9 @@ class FileDataSource : public DataSource {
 
  protected:
   virtual std::unique_ptr<FileSplitReader> createSplitReader();
+  virtual const RowTypePtr getOutputType() {
+    return outputType_;
+  }
 
   FileHandleFactory* const fileHandleFactory_;
   folly::Executor* const ioExecutor_;

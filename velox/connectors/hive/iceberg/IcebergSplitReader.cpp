@@ -78,6 +78,80 @@ void fillNullsWithInt64(
 namespace facebook::velox::connector::hive::iceberg {
 namespace {
 
+/// Creates a constant vector for a changelog metadata column.
+/// Returns nullptr if the column name is not a recognized changelog column
+/// or if changelogSplitInfo is not present.
+/// Transform output for changelog tables by wrapping data columns into rowdata
+/// and adding metadata columns (operation, ordinal, snapshotid)
+VectorPtr transformChangelogOutput(
+    const VectorPtr& dataOutput,
+    const std::shared_ptr<ChangelogSplitInfo>& changelogInfo,
+    const RowTypePtr& outputType,
+    memory::MemoryPool* pool) {
+  if (!changelogInfo) {
+    return dataOutput;
+  }
+
+  auto* dataRowVector = dataOutput->as<RowVector>();
+  VELOX_CHECK_NOT_NULL(dataRowVector, "Expected RowVector output");
+
+  const auto positionCount = dataRowVector->size();
+  std::vector<VectorPtr> changelogColumns;
+  changelogColumns.reserve(outputType->size());
+
+  // Build changelog columns in the order specified by outputType
+  for (size_t i = 0; i < outputType->size(); ++i) {
+    const auto& fieldName = outputType->nameOf(i);
+    
+    if (fieldName == "operation") {
+      std::string operationStr;
+      switch (changelogInfo->operation) {
+        case ChangelogOperation::INSERT:
+          operationStr = "INSERT";
+          break;
+        case ChangelogOperation::DELETE:
+          operationStr = "DELETE";
+          break;
+        case ChangelogOperation::UPDATE_BEFORE:
+          operationStr = "UPDATE_BEFORE";
+          break;
+        case ChangelogOperation::UPDATE_AFTER:
+          operationStr = "UPDATE_AFTER";
+          break;
+      }
+      auto constant = BaseVector::createConstant(
+          VARCHAR(), variant(operationStr), positionCount, pool);
+      changelogColumns.push_back(constant);
+    } else if (fieldName == "ordinal") {
+      auto constant = BaseVector::createConstant(
+          BIGINT(), variant(changelogInfo->ordinal), positionCount, pool);
+      changelogColumns.push_back(constant);
+    } else if (fieldName == "snapshotid") {
+      auto constant = BaseVector::createConstant(
+          BIGINT(), variant(changelogInfo->snapshotId), positionCount, pool);
+      changelogColumns.push_back(constant);
+    } else if (fieldName == "rowdata") {
+      // Wrap all data columns into a RowVector
+      // Use the rowdata type from outputType, not dataRowVector->type()
+      auto rowdataType = outputType->childAt(i);
+      auto rowdataVector = std::make_shared<RowVector>(
+          pool,
+          rowdataType,
+          BufferPtr(nullptr),
+          positionCount,
+          dataRowVector->children());
+      changelogColumns.push_back(rowdataVector);
+    }
+  }
+
+  return std::make_shared<RowVector>(
+      pool,
+      outputType,
+      BufferPtr(nullptr),
+      positionCount,
+      std::move(changelogColumns));
+}
+
 /// Returns true if a delete/update file should be skipped based on sequence
 /// number conflict resolution. Per the Iceberg spec (V2+):
 ///   - Equality deletes apply when deleteSeqNum > dataSeqNum (i.e., skip when
@@ -667,6 +741,15 @@ uint64_t IcebergSplitReader::next(uint64_t size, VectorPtr& output) {
     return rowsScanned;
   }
 
+  // Transform output for changelog tables
+  if (icebergSplit_->changelogSplitInfo && rowsScanned > 0) {
+    output = transformChangelogOutput(
+        output,
+        icebergSplit_->changelogSplitInfo,
+        readerOutputType_,
+        pool);
+  }
+
   return rowsScanned;
 }
 
@@ -692,6 +775,17 @@ std::vector<TypePtr> IcebergSplitReader::adaptColumns(
           readTimestampAsLocalTime,
           false);
       childSpec->setConstantValue(constant);
+    } else if (icebergSplit_->changelogSplitInfo &&
+               (fieldName == "operation" || fieldName == "ordinal" ||
+                fieldName == "snapshotid" || fieldName == "rowdata")) {
+      // Changelog columns will be added during output transformation in next()
+      // Set a null constant to prevent reading from file
+      // childSpec->setConstantValue(
+      //     BaseVector::createNullConstant(
+      //         readerOutputType_->findChild(fieldName),
+      //         1,
+      //         connectorQueryCtx_->memoryPool()));
+      continue;
     } else {
       auto fileTypeIdx = fileType->getChildIdxIfExists(fieldName);
       auto outputTypeIdx = readerOutputType_->getChildIdxIfExists(fieldName);
@@ -821,3 +915,4 @@ std::vector<TypePtr> IcebergSplitReader::adaptColumns(
 }
 
 } // namespace facebook::velox::connector::hive::iceberg
+

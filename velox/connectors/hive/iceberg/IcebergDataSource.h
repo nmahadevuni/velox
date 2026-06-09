@@ -35,9 +35,12 @@ class IcebergDataSource : public HiveDataSource {
       FileHandleFactory* fileHandleFactory,
       folly::Executor* ioExecutor,
       const ConnectorQueryCtx* connectorQueryCtx,
-      const std::shared_ptr<HiveConfig>& hiveConfig);
+      const std::shared_ptr<HiveConfig>& hiveConfig,
+      const RowTypePtr& changelogOutputType = nullptr,
+      const ColumnHandleMap& changeLogAssignments = {});
 
  protected:
+
   /// Creates an IcebergSplitReader for reading Iceberg data files.
   ///
   /// Unlike the base HiveDataSource which creates a generic FileSplitReader,
@@ -45,9 +48,19 @@ class IcebergDataSource : public HiveDataSource {
   /// features like positional delete files and schema evolution.
   std::unique_ptr<FileSplitReader> createSplitReader() override;
 
+  const RowTypePtr getOutputType() override {
+    return changelogOutputType_ ? changelogOutputType_ : HiveDataSource::getOutputType();
+  }
+
  private:
   /// Column handles map for accessing column metadata.
   std::shared_ptr<ColumnHandleMap> columnHandles_;
+  std::shared_ptr<ColumnHandleMap> changeLogAssignments_;
+  
+  /// For changelog splits, stores the original changelog output type
+  /// (operation, ordinal, snapshotid, rowdata) while readerOutputType_
+  /// is temporarily set to the data columns for scan spec creation.
+  const RowTypePtr changelogOutputType_;
 };
 
 } // namespace facebook::velox::connector::hive::iceberg

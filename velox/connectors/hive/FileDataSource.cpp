@@ -518,7 +518,9 @@ void FileDataSource::addSplit(std::shared_ptr<ConnectorSplit> split) {
   // so we initialize it beforehand.
   splitReader_->configureReaderOptions(randomSkip_);
   splitReader_->prepareSplit(metadataFilter_, runtimeStats_);
-  readerOutputType_ = splitReader_->readerOutputType();
+  if (!readerOutputType_) {
+    readerOutputType_ = splitReader_->readerOutputType();
+  }
 }
 
 std::optional<RowVectorPtr> FileDataSource::next(
@@ -586,13 +588,15 @@ std::optional<RowVectorPtr> FileDataSource::next(
     }
   }
 
-  if (outputType_->size() == 0) {
+  auto outputType = getOutputType();
+
+  if (outputType->size() == 0) {
     return exec::wrap(rowsRemaining, remainingIndices, rowVector);
   }
 
   std::vector<VectorPtr> outputColumns;
-  outputColumns.reserve(outputType_->size());
-  for (int i = 0; i < outputType_->size(); ++i) {
+  outputColumns.reserve(outputType->size());
+  for (int i = 0; i < outputType->size(); ++i) {
     auto& child = rowVector->childAt(i);
     if (remainingIndices) {
       // Disable dictionary values caching in expression eval so that we
@@ -607,7 +611,7 @@ std::optional<RowVectorPtr> FileDataSource::next(
   }
 
   return std::make_shared<RowVector>(
-      pool_, outputType_, BufferPtr(nullptr), rowsRemaining, outputColumns);
+      pool_, outputType, BufferPtr(nullptr), rowsRemaining, outputColumns);
 }
 
 void FileDataSource::addDynamicFilter(

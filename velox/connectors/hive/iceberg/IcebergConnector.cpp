@@ -37,6 +37,55 @@ void registerIcebergInternalFunctions(const std::string& prefix) {
   });
 }
 
+// Helper function to extract data columns from changelog schema.
+// If outputType contains a 'rowdata' field (changelog schema), extracts
+// the ROW type from that field. Otherwise returns outputType unchanged.
+RowTypePtr extractDataColumnsFromChangelogSchema(const RowTypePtr& outputType) {
+  auto rowdataIdx = outputType->getChildIdxIfExists("rowdata");
+  if (rowdataIdx.has_value()) {
+    // This is a changelog schema - extract the data columns from rowdata field
+    auto rowdataType = std::dynamic_pointer_cast<const RowType>(
+        outputType->childAt(*rowdataIdx));
+    VELOX_CHECK_NOT_NULL(
+        rowdataType,
+        "rowdata field must be a ROW type in changelog schema");
+    return rowdataType;
+  }
+  // Not a changelog schema - return as is
+  return outputType;
+}
+
+// Helper function to extract data column assignments from tableHandle's
+// dataColumns
+//ColumnHandleMap extractDataColumnAssignments(const RowTypePtr& dataSchema) {
+//
+//  // Get the field IDs from rowdata's children
+//  const auto& rowdataFieldId = rowdataHandle->field();
+//  const auto& childFieldIds = rowdataFieldId.children;
+//
+//  VELOX_CHECK_EQ(
+//      childFieldIds.size(),
+//      dataSchema->size(),
+//      "Number of field IDs in rowdata must match number of data columns");
+//
+//  // Create new column handles for each data column
+//  ColumnHandleMap dataAssignments;
+//  for (size_t i = 0; i < dataSchema->size(); ++i) {
+//    const auto& columnName = dataSchema->nameOf(i);
+//    const auto& columnType = dataSchema->childAt(i);
+//
+//    auto dataColumnHandle = std::make_shared<IcebergColumnHandle>(
+//        columnName,
+//        HiveColumnHandle::ColumnType::kRegular,
+//        columnType,
+//        childFieldIds[i]);
+//
+//    dataAssignments[columnName] = dataColumnHandle;
+//  }
+//
+//  return dataAssignments;
+//}
+
 } // namespace
 
 IcebergConnector::IcebergConnector(
@@ -53,6 +102,21 @@ std::unique_ptr<DataSource> IcebergConnector::createDataSource(
     const ConnectorTableHandlePtr& tableHandle,
     const ColumnHandleMap& columnHandles,
     ConnectorQueryCtx* connectorQueryCtx) {
+  auto icebergTableHandle = std::dynamic_pointer_cast<const HiveTableHandle>(tableHandle);
+  VELOX_CHECK_NOT_NULL(icebergTableHandle, "IcebergTableHandle is null");
+
+  if (icebergTableHandle->isChangelogQuery()) {
+    return std::make_unique<IcebergDataSource>(
+        icebergTableHandle->dataColumns(),
+        tableHandle,
+        icebergTableHandle->getDataColumnHandles(),
+        &fileHandleFactory_,
+        ioExecutor_,
+        connectorQueryCtx,
+        hiveConfig_,
+        outputType,
+        columnHandles);
+  }
   return std::make_unique<IcebergDataSource>(
       outputType,
       tableHandle,
